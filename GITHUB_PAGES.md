@@ -8,7 +8,7 @@
 
 ```sh
 mkdir -p ~/work/tetris
-cp index.html game.html READMD.md GITHUB_PAGES.md ~/work/tetris/
+cp index.html game.html README.md GITHUB_PAGES.md ~/work/tetris/
 cd ~/work/tetris
 ```
 
@@ -57,7 +57,7 @@ GitHub 계정 `rrrryeong`으로 로그인해 `tetris`라는 새 저장소를 만
 ```sh
 cd ~/work/tetris
 git init -b main
-git add index.html game.html READMD.md GITHUB_PAGES.md
+git add index.html game.html README.md GITHUB_PAGES.md
 git commit -m "Prepare Tetris for GitHub Pages"
 git remote add origin git@github.com:rrrryeong/tetris.git
 git push -u origin main
@@ -95,7 +95,7 @@ https://rrrryeong.github.io/tetris/
 
 ```sh
 cd ~/work/tetris
-git add index.html game.html READMD.md
+git add index.html game.html README.md
 git commit -m "Update Tetris app"
 git push
 ```
