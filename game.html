@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#141218">
+  <title>NEON STACK — Tetris</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #141218;
+      --panel: #211f26;
+      --panel-light: #2b2930;
+      --line: #49454f;
+      --muted: #c9c4d0;
+      --text: #e6e0e9;
+      --lime: #d0bcff;
+      --cyan: #b0c8ff;
+      --pink: #ffb4ab;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      padding: 34px 24px 26px;
+      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button { font: inherit; }
+
+    .shell { width: min(100%, 1040px); margin: 0 auto; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2px 24px;
+      border-bottom: 1px solid rgba(230,224,233,.12);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+    .brand-mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 1px solid rgba(208,188,255,.3);
+      border-radius: 12px;
+      background: #332d41;
+      color: var(--lime);
+      font-size: 22px;
+      line-height: 1;
+      box-shadow: none;
+    }
+
+    .brand-name { margin: 0; font-size: 13px; font-weight: 850; letter-spacing: .18em; }
+    .brand-sub { margin: 4px 0 0; color: var(--muted); font-size: 10px; font-weight: 650; letter-spacing: .16em; }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .session-tag { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 100px; background: #211f26; color: #c9c4d0; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #a8c7fa; }
+    .music-button {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 14px;
+      border: 1px solid #625b70;
+      border-radius: 100px;
+      background: transparent;
+      color: #e6e0e9;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 650;
+      transition: background .18s ease, border-color .18s ease;
+    }
+    .music-button[aria-pressed="true"] { border-color: #d0bcff; background: #332d41; color: #eaddff; }
+    .music-button:hover { background: #2b2930; }
+    .music-icon { color: #d0bcff; font-size: 17px; line-height: 1; }
+
+    main { padding-top: 31px; }
+    .intro { margin-bottom: 23px; }
+    .eyebrow { margin: 0 0 9px; color: #d0bcff; font-size: 10px; font-weight: 800; letter-spacing: .16em; }
+    h1 { margin: 0; font-size: clamp(25px, 4vw, 35px); font-weight: 780; letter-spacing: -.055em; }
+    .intro p:last-child { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+
+    .game-layout {
+      display: grid;
+      grid-template-columns: minmax(290px, 1fr) 270px;
+      align-items: start;
+      gap: 20px;
+    }
+
+    .board-card, .info-card {
+      border: 1px solid rgba(230,224,233,.08);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: 0 2px 8px rgba(0,0,0,.22), 0 1px 2px rgba(0,0,0,.18);
+    }
+
+    .board-card { padding: 17px; }
+    .board-heading { display: flex; align-items: center; justify-content: space-between; padding: 0 2px 13px; }
+    .board-heading strong { font-size: 11px; letter-spacing: .14em; }
+    .board-state { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+    .state-light { width: 6px; height: 6px; border-radius: 50%; background: #6a7082; }
+    .board-state[data-state="playing"] .state-light { background: var(--lime); box-shadow: 0 0 9px var(--lime); }
+    .board-state[data-state="over"] .state-light { background: var(--pink); box-shadow: 0 0 9px var(--pink); }
+
+    .canvas-wrap {
+      position: relative;
+      width: min(100%, 340px);
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid #49454f;
+      border-radius: 16px;
+      background: #141218;
+      box-shadow: inset 0 0 24px rgba(0,0,0,.18);
+    }
+
+    canvas { display: block; width: 100%; height: auto; aspect-ratio: 1 / 2; }
+
+    .touch-controls { display: none; }
+
+    .board-overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      padding: 24px;
+      background: rgba(20,18,24,.82);
+      text-align: center;
+      backdrop-filter: blur(3px);
+    }
+
+    .board-overlay[hidden] { display: none; }
+    .overlay-kicker { margin: 0 0 8px; color: #d0bcff; font-size: 10px; font-weight: 800; letter-spacing: .18em; }
+    .overlay-title { margin: 0; font-size: clamp(27px, 5vw, 38px); font-weight: 850; letter-spacing: -.06em; }
+    .overlay-copy { max-width: 220px; margin: 10px 0 19px; color: #a4aabd; font-size: 12px; line-height: 1.65; }
+
+    .primary-button {
+      min-height: 48px;
+      padding: 0 24px;
+      border: 0;
+      border-radius: 100px;
+      background: #d0bcff;
+      color: #381e72;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 750;
+      letter-spacing: .01em;
+      box-shadow: 0 2px 5px rgba(0,0,0,.25);
+      transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+    }
+
+    .primary-button:hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 4px 9px rgba(0,0,0,.3); }
+    .primary-button:active { transform: translateY(0); }
+    button:focus-visible { outline: 2px solid #d0bcff; outline-offset: 3px; }
+
+    .board-footer { display: flex; justify-content: space-between; gap: 10px; padding: 13px 2px 0; color: var(--muted); font-size: 10px; }
+    .board-footer b { color: #d2d7e6; font-weight: 700; }
+
+    .sidebar { display: grid; gap: 12px; }
+    .info-card { padding: 17px; }
+    .card-label { margin: 0 0 15px; color: #cac4d0; font-size: 11px; font-weight: 750; letter-spacing: .1em; }
+    .score-value { margin: 0; font-variant-numeric: tabular-nums; font-size: 38px; font-weight: 800; letter-spacing: -.06em; line-height: 1; }
+    .score-caption { margin: 8px 0 0; color: var(--muted); font-size: 11px; }
+    .score-rule { height: 1px; margin: 16px 0 13px; background: var(--line); }
+    .stat-row { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 11px; }
+    .stat-row + .stat-row { margin-top: 9px; }
+    .stat-row strong { color: #e6e0e9; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+    .controls { display: grid; gap: 11px; }
+    .control-row { display: grid; grid-template-columns: 66px 1fr; align-items: center; gap: 10px; }
+    .key-cluster { display: flex; justify-content: flex-start; gap: 3px; }
+    kbd {
+      display: inline-grid;
+      min-width: 21px;
+      height: 22px;
+      padding: 0 5px;
+      place-items: center;
+      border: 1px solid #625b70;
+      border-bottom-width: 2px;
+      border-radius: 6px;
+      background: #332d41;
+      color: #e1e5f0;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 750;
+    }
+    .control-desc { color: #a4a9b8; font-size: 11px; }
+    .control-tip { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; line-height: 1.6; }
+
+    .reset-button {
+      display: flex;
+      width: 100%;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid #625b70;
+      border-radius: 100px;
+      background: transparent;
+      color: #e6e0e9;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 650;
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .reset-button:hover { border-color: #d0bcff; background: #332d41; }
+
+    .page-footer { display: flex; justify-content: space-between; margin-top: 22px; padding: 15px 2px 0; border-top: 1px solid var(--line); color: #686e80; font-size: 10px; letter-spacing: .06em; }
+    .page-footer span:last-child { color: #8c92a3; }
+
+    @media (max-width: 700px) {
+      body { padding: 20px 14px 20px; }
+      .topbar { padding-bottom: 17px; }
+      .top-actions { gap: 7px; }
+      .music-button { min-height: 36px; padding: 0 11px; font-size: 11px; }
+      .session-tag { padding: 7px 9px; font-size: 9px; }
+      main { padding-top: 22px; }
+      .intro { margin-bottom: 17px; }
+      .game-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; max-width: 470px; margin: 0 auto; }
+      .board-card { padding: 12px; }
+      .canvas-wrap { width: min(100%, 310px); }
+      .touch-controls { display: grid; width: min(100%, 310px); gap: 8px; margin: 12px auto 0; }
+      .touch-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+      .touch-button {
+        display: grid;
+        min-height: 48px;
+        place-items: center;
+        border: 1px solid #625b70;
+        border-radius: 14px;
+        background: #332d41;
+        color: #eaddff;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 750;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .touch-button:active { background: #49415c; }
+      .touch-button .touch-label { font-size: 10px; font-weight: 650; }
+      .touch-button.hard-drop { min-height: 42px; grid-column: 1 / -1; background: #d0bcff; color: #381e72; }
+      .controls-card .controls { display: none; }
+      .sidebar { grid-template-columns: 1fr 1fr; align-items: stretch; }
+      .score-card { grid-column: 1 / -1; }
+      .info-card { padding: 14px; }
+      .controls-card { grid-row: span 2; }
+      .control-row { grid-template-columns: 58px 1fr; gap: 6px; }
+      .control-desc { font-size: 10px; }
+      .page-footer { margin-top: 16px; }
+    }
+
+    @media (max-width: 390px) {
+      .topbar { align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+      .top-actions { width: 100%; justify-content: space-between; padding-left: 46px; }
+      .session-tag { font-size: 9px; }
+      .brand-mark { width: 34px; height: 34px; }
+      .sidebar { grid-template-columns: 1fr; }
+      .score-card, .controls-card { grid-column: auto; grid-row: auto; }
+      .score-card { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+      .score-card .card-label { grid-column: 1 / -1; margin-bottom: 11px; }
+      .score-caption { margin-top: 0; }
+      .score-rule { display: none; }
+      .score-details { display: flex; gap: 18px; }
+      .score-details .stat-row { gap: 6px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="NEON STACK 홈으로 이동">
+        <div class="brand-mark" aria-hidden="true">▦</div>
+        <div>
+          <p class="brand-name">NEON STACK</p>
+          <p class="brand-sub">ARCADE SERIES / 001</p>
+        </div>
+      </a>
+      <div class="top-actions">
+        <button class="music-button" id="musicButton" type="button" aria-pressed="true" aria-label="배경 음악 끄기">
+          <span class="music-icon" aria-hidden="true">♫</span><span id="musicLabel">음악 켜짐</span>
+        </button>
+        <div class="session-tag"><span class="live-dot" aria-hidden="true"></span> SOLO SESSION</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">THE CLASSIC, REWIRED</p>
+        <h1 id="page-title">쌓고, 지우고, 다시.</h1>
+        <p>한 줄씩 비워내며 최고 점수에 도전하세요.</p>
+      </section>
+
+      <section class="game-layout" aria-label="테트리스 게임">
+        <div class="board-card">
+          <div class="board-heading">
+            <strong>GAME FIELD</strong>
+            <span class="board-state" id="boardState" data-state="ready"><span class="state-light"></span><span id="stateText">READY</span></span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="gameCanvas" width="300" height="600" role="img" aria-label="10칸 너비, 20칸 높이의 테트리스 게임판"></canvas>
+            <div class="board-overlay" id="overlay">
+              <p class="overlay-kicker" id="overlayKicker">READY PLAYER ONE</p>
+              <h2 class="overlay-title" id="overlayTitle">시작할까요?</h2>
+              <p class="overlay-copy" id="overlayCopy">블록을 맞춰 줄을 지우고<br>보드를 비워보세요.</p>
+              <button class="primary-button" id="startButton" type="button">게임 시작 <span aria-hidden="true">→</span></button>
+            </div>
+          </div>
+          <div class="touch-controls" aria-label="터치 조작 버튼">
+            <div class="touch-row">
+              <button class="touch-button" type="button" data-touch-action="left" aria-label="왼쪽으로 이동">←</button>
+              <button class="touch-button" type="button" data-touch-action="rotate" aria-label="블록 회전">↻</button>
+              <button class="touch-button" type="button" data-touch-action="down" aria-label="빠르게 내리기">↓</button>
+              <button class="touch-button" type="button" data-touch-action="right" aria-label="오른쪽으로 이동">→</button>
+            </div>
+            <button class="touch-button hard-drop" type="button" data-touch-action="hard-drop" aria-label="즉시 떨어뜨리기">즉시 떨어뜨리기</button>
+          </div>
+          <div class="board-footer"><span>GRID <b>10 × 20</b></span><span>7 SHAPES <b>·</b> ENDLESS</span></div>
+        </div>
+
+        <aside class="sidebar" aria-label="게임 정보와 조작 방법">
+          <section class="info-card score-card" aria-label="점수">
+            <p class="card-label">CURRENT SCORE</p>
+            <p class="score-value" id="score">000000</p>
+            <p class="score-caption">한 줄을 지우면 점수가 올라갑니다.</p>
+            <div class="score-rule"></div>
+            <div class="score-details">
+              <div class="stat-row"><span>지운 줄</span><strong id="lines">0</strong></div>
+              <div class="stat-row"><span>레벨</span><strong id="level">01</strong></div>
+            </div>
+          </section>
+
+          <section class="info-card controls-card">
+            <p class="card-label">조작 방법</p>
+            <div class="controls">
+              <div class="control-row"><div class="key-cluster"><kbd>←</kbd><kbd>→</kbd></div><span class="control-desc">좌우 이동</span></div>
+              <div class="control-row"><div class="key-cluster"><kbd>↑</kbd></div><span class="control-desc">블록 회전</span></div>
+              <div class="control-row"><div class="key-cluster"><kbd>↓</kbd></div><span class="control-desc">빠르게 내리기</span></div>
+              <div class="control-row"><div class="key-cluster"><kbd>SPACE</kbd></div><span class="control-desc">즉시 떨어뜨리기</span></div>
+            </div>
+            <p class="control-tip">게임 시작과 함께 코로베이니카가 재생됩니다. 게임이 끝나면 다시 시작하세요.<br>♪ WebAudio로 합성한 BGM</p>
+          </section>
+
+          <button class="reset-button" id="resetButton" type="button"><span aria-hidden="true">↻</span> 다시 시작</button>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="page-footer"><span>NEON STACK / TETRIS MVP</span><span>MADE FOR ONE MORE ROUND</span></footer>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const COLS = 10;
+      const ROWS = 20;
+      const CELL = 30;
+      const COLORS = {
+        I: '#48dfff', O: '#cbff55', T: '#bc83ff', S: '#69edaa',
+        Z: '#ff5db1', J: '#5887ff', L: '#ffad55'
+      };
+      const SHAPES = {
+        I: [[1, 1, 1, 1]],
+        O: [[1, 1], [1, 1]],
+        T: [[0, 1, 0], [1, 1, 1]],
+        S: [[0, 1, 1], [1, 1, 0]],
+        Z: [[1, 1, 0], [0, 1, 1]],
+        J: [[1, 0, 0], [1, 1, 1]],
+        L: [[0, 0, 1], [1, 1, 1]]
+      };
+      // Korobeiniki's familiar melody, represented as MIDI pitch + quarter-note beats.
+      const KOROBEINIKI = [
+        [76, .5], [71, .5], [72, .5], [74, .5], [72, .5], [71, .5], [69, 1], [0, .25],
+        [69, .5], [72, .5], [76, 1], [74, .5], [72, .5], [71, 1], [0, .25],
+        [71, .5], [72, .5], [74, .5], [76, .5], [72, .5], [69, 1], [0, .25], [69, 1],
+        [74, .5], [77, .5], [81, 1], [79, .5], [77, .5], [76, 1], [0, .25],
+        [72, .5], [76, .5], [74, .5], [72, .5], [71, 1], [0, .25],
+        [71, .5], [72, .5], [74, .5], [76, .5], [72, .5], [69, 1], [0, .25], [69, 1],
+        [76, .5], [72, .5], [76, .5], [72, .5], [76, .5], [77, .5], [79, 1], [77, .5],
+        [76, .5], [72, .5], [74, .5], [71, 1], [0, .5]
+      ];
+
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const overlay = document.getElementById('overlay');
+      const startButton = document.getElementById('startButton');
+      const resetButton = document.getElementById('resetButton');
+      const musicButton = document.getElementById('musicButton');
+      const musicLabel = document.getElementById('musicLabel');
+      const touchButtons = document.querySelectorAll('[data-touch-action]');
+      const scoreView = document.getElementById('score');
+      const linesView = document.getElementById('lines');
+      const levelView = document.getElementById('level');
+      const stateView = document.getElementById('boardState');
+      const stateText = document.getElementById('stateText');
+      const overlayKicker = document.getElementById('overlayKicker');
+      const overlayTitle = document.getElementById('overlayTitle');
+      const overlayCopy = document.getElementById('overlayCopy');
+
+      let board = emptyBoard();
+      let active = null;
+      let running = false;
+      let gameOver = false;
+      let score = 0;
+      let lines = 0;
+      let level = 1;
+      let dropCounter = 0;
+      let lastTime = 0;
+      let animationFrame = 0;
+      let musicEnabled = true;
+      let audioContext = null;
+      let musicTimer = 0;
+      let musicIndex = 0;
+      let nextNoteTime = 0;
+      const musicBpm = 148;
+
+      function emptyBoard() {
+        return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+      }
+
+      function resizeCanvas() {
+        const ratio = Math.max(1, window.devicePixelRatio || 1);
+        canvas.width = Math.round(COLS * CELL * ratio);
+        canvas.height = Math.round(ROWS * CELL * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        draw();
+      }
+
+      function setState(state, label) {
+        stateView.dataset.state = state;
+        stateText.textContent = label;
+      }
+
+      function updateStats() {
+        scoreView.textContent = String(score).padStart(6, '0');
+        linesView.textContent = String(lines);
+        levelView.textContent = String(level).padStart(2, '0');
+      }
+
+      function updateMusicControl() {
+        musicButton.setAttribute('aria-pressed', String(musicEnabled));
+        musicButton.setAttribute('aria-label', musicEnabled ? '배경 음악 끄기' : '배경 음악 켜기');
+        musicLabel.textContent = musicEnabled ? '음악 켜짐' : '음악 꺼짐';
+      }
+
+      function scheduleMusic() {
+        if (!audioContext || !musicEnabled || !running) return;
+        const lookAhead = audioContext.currentTime + .14;
+        while (nextNoteTime < lookAhead) {
+          const [midi, beats] = KOROBEINIKI[musicIndex];
+          const duration = beats * 60 / musicBpm;
+          if (midi > 0) playSynthNote(midi, nextNoteTime, duration);
+          nextNoteTime += duration;
+          musicIndex = (musicIndex + 1) % KOROBEINIKI.length;
+        }
+      }
+
+      function playSynthNote(midi, startAt, duration) {
+        const oscillator = audioContext.createOscillator();
+        const filter = audioContext.createBiquadFilter();
+        const volume = audioContext.createGain();
+        const frequency = 440 * Math.pow(2, (midi - 69) / 12);
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(frequency, startAt);
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(2100, startAt);
+        volume.gain.setValueAtTime(.0001, startAt);
+        volume.gain.exponentialRampToValueAtTime(.035, startAt + .012);
+        volume.gain.setValueAtTime(.035, startAt + Math.max(.02, duration * .72));
+        volume.gain.exponentialRampToValueAtTime(.0001, startAt + duration * .94);
+        oscillator.connect(filter);
+        filter.connect(volume);
+        volume.connect(audioContext.destination);
+        oscillator.start(startAt);
+        oscillator.stop(startAt + duration);
+        oscillator.addEventListener('ended', () => {
+          oscillator.disconnect();
+          filter.disconnect();
+          volume.disconnect();
+        }, { once: true });
+      }
+
+      async function startMusic() {
+        if (!musicEnabled || !running) return;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+          musicEnabled = false;
+          updateMusicControl();
+          return;
+        }
+        try {
+          if (!audioContext) audioContext = new AudioContextClass();
+          await audioContext.resume();
+          if (!musicEnabled || !running) return;
+          window.clearInterval(musicTimer);
+          musicIndex = 0;
+          nextNoteTime = audioContext.currentTime + .05;
+          scheduleMusic();
+          musicTimer = window.setInterval(scheduleMusic, 30);
+        } catch (error) {
+          musicEnabled = false;
+          updateMusicControl();
+        }
+      }
+
+      function stopMusic() {
+        window.clearInterval(musicTimer);
+        musicTimer = 0;
+      }
+
+      function randomPiece() {
+        const types = Object.keys(SHAPES);
+        const type = types[Math.floor(Math.random() * types.length)];
+        const matrix = SHAPES[type].map(row => row.slice());
+        return { type, matrix, x: Math.floor((COLS - matrix[0].length) / 2), y: 0 };
+      }
+
+      function collides(piece, offsetX = 0, offsetY = 0, matrix = piece.matrix) {
+        for (let y = 0; y < matrix.length; y++) {
+          for (let x = 0; x < matrix[y].length; x++) {
+            if (!matrix[y][x]) continue;
+            const boardX = piece.x + x + offsetX;
+            const boardY = piece.y + y + offsetY;
+            if (boardX < 0 || boardX >= COLS || boardY >= ROWS) return true;
+            if (boardY >= 0 && board[boardY][boardX]) return true;
+          }
+        }
+        return false;
+      }
+
+      function spawnPiece() {
+        active = randomPiece();
+        if (collides(active)) finishGame();
+      }
+
+      function startGame() {
+        board = emptyBoard();
+        active = null;
+        score = 0;
+        lines = 0;
+        level = 1;
+        dropCounter = 0;
+        lastTime = 0;
+        gameOver = false;
+        running = true;
+        updateStats();
+        overlay.hidden = true;
+        setState('playing', 'PLAYING');
+        spawnPiece();
+        cancelAnimationFrame(animationFrame);
+        animationFrame = requestAnimationFrame(tick);
+        startMusic();
+        draw();
+      }
+
+      function finishGame() {
+        running = false;
+        stopMusic();
+        gameOver = true;
+        active = null;
+        cancelAnimationFrame(animationFrame);
+        setState('over', 'GAME OVER');
+        overlayKicker.textContent = 'RUN COMPLETE';
+        overlayTitle.textContent = '게임 오버';
+        overlayCopy.innerHTML = `최종 점수 <strong>${String(score).padStart(6, '0')}</strong><br>다시 도전해보세요.`;
+        startButton.innerHTML = '다시 플레이 <span aria-hidden="true">→</span>';
+        overlay.hidden = false;
+        draw();
+      }
+
+      function lockPiece() {
+        if (!active) return;
+        active.matrix.forEach((row, y) => row.forEach((value, x) => {
+          if (value && active.y + y >= 0) board[active.y + y][active.x + x] = active.type;
+        }));
+
+        let cleared = 0;
+        for (let y = ROWS - 1; y >= 0; y--) {
+          if (board[y].every(Boolean)) {
+            board.splice(y, 1);
+            board.unshift(Array(COLS).fill(null));
+            cleared++;
+            y++;
+          }
+        }
+
+        if (cleared) {
+          const points = [0, 100, 300, 500, 800][cleared] || cleared * 200;
+          score += points * level;
+          lines += cleared;
+          level = Math.floor(lines / 10) + 1;
+          updateStats();
+        }
+        spawnPiece();
+      }
+
+      function stepDown(manual = false) {
+        if (!running || !active) return;
+        if (!collides(active, 0, 1)) {
+          active.y++;
+          if (manual) {
+            score++;
+            updateStats();
+          }
+        } else {
+          lockPiece();
+        }
+        dropCounter = 0;
+        draw();
+      }
+
+      function move(dx) {
+        if (!running || !active || collides(active, dx, 0)) return;
+        active.x += dx;
+        draw();
+      }
+
+      function rotate() {
+        if (!running || !active) return;
+        const matrix = active.matrix;
+        const rotated = matrix[0].map((_, x) => matrix.map(row => row[x]).reverse());
+        for (const offset of [0, -1, 1, -2, 2]) {
+          if (!collides(active, offset, 0, rotated)) {
+            active.matrix = rotated;
+            active.x += offset;
+            draw();
+            return;
+          }
+        }
+      }
+
+      function hardDrop() {
+        if (!running || !active) return;
+        let distance = 0;
+        while (!collides(active, 0, 1)) {
+          active.y++;
+          distance++;
+        }
+        score += distance * 2;
+        updateStats();
+        lockPiece();
+        draw();
+      }
+
+      function performTouchAction(action) {
+        if (!running) return;
+        if (action === 'left') move(-1);
+        else if (action === 'right') move(1);
+        else if (action === 'rotate') rotate();
+        else if (action === 'down') stepDown(true);
+        else if (action === 'hard-drop') hardDrop();
+      }
+
+      touchButtons.forEach(button => {
+        let repeatDelay = 0;
+        let repeatInterval = 0;
+        const stopRepeating = () => {
+          window.clearTimeout(repeatDelay);
+          window.clearInterval(repeatInterval);
+          repeatDelay = 0;
+          repeatInterval = 0;
+        };
+
+        button.addEventListener('pointerdown', event => {
+          if (event.pointerType === 'mouse' && event.button !== 0) return;
+          event.preventDefault();
+          button.setPointerCapture(event.pointerId);
+          const action = button.dataset.touchAction;
+          performTouchAction(action);
+          if (['left', 'right', 'down'].includes(action)) {
+            repeatDelay = window.setTimeout(() => {
+              repeatInterval = window.setInterval(() => performTouchAction(action), 90);
+            }, 250);
+          }
+        });
+        button.addEventListener('pointerup', stopRepeating);
+        button.addEventListener('pointercancel', stopRepeating);
+        button.addEventListener('lostpointercapture', stopRepeating);
+      });
+
+      function drawCell(x, y, type, alpha = 1) {
+        const inset = 1.4;
+        const px = x * CELL + inset;
+        const py = y * CELL + inset;
+        const size = CELL - inset * 2;
+        const color = COLORS[type];
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 9;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(px, py, size, size, 5);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,.2)';
+        ctx.beginPath();
+        ctx.roundRect(px + 3, py + 3, size - 6, 3, 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function draw() {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, COLS * CELL, ROWS * CELL);
+        ctx.fillStyle = '#0b0f18';
+        ctx.fillRect(0, 0, COLS * CELL, ROWS * CELL);
+
+        ctx.strokeStyle = 'rgba(160,179,220,.075)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= COLS; x++) {
+          ctx.beginPath();
+          ctx.moveTo(x * CELL + .5, 0);
+          ctx.lineTo(x * CELL + .5, ROWS * CELL);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= ROWS; y++) {
+          ctx.beginPath();
+          ctx.moveTo(0, y * CELL + .5);
+          ctx.lineTo(COLS * CELL, y * CELL + .5);
+          ctx.stroke();
+        }
+
+        board.forEach((row, y) => row.forEach((type, x) => {
+          if (type) drawCell(x, y, type);
+        }));
+
+        if (active) {
+          active.matrix.forEach((row, y) => row.forEach((value, x) => {
+            if (value && active.y + y >= 0) drawCell(active.x + x, active.y + y, active.type);
+          }));
+        }
+      }
+
+      function tick(time = 0) {
+        if (!running) return;
+        const delta = time - lastTime;
+        lastTime = time;
+        dropCounter += delta;
+        const interval = Math.max(110, 800 - (level - 1) * 65);
+        if (dropCounter >= interval) stepDown();
+        draw();
+        if (running) animationFrame = requestAnimationFrame(tick);
+      }
+
+      document.addEventListener('keydown', event => {
+        const keys = ['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', ' '];
+        if (keys.includes(event.key)) event.preventDefault();
+        if (!running) {
+          if (event.key === 'Enter' && (gameOver || !running)) startGame();
+          return;
+        }
+        switch (event.key) {
+          case 'ArrowLeft': move(-1); break;
+          case 'ArrowRight': move(1); break;
+          case 'ArrowDown': stepDown(true); break;
+          case 'ArrowUp': move(0); rotate(); break;
+          case ' ': hardDrop(); break;
+        }
+      });
+
+      startButton.addEventListener('click', startGame);
+      resetButton.addEventListener('click', startGame);
+      musicButton.addEventListener('click', () => {
+        musicEnabled = !musicEnabled;
+        updateMusicControl();
+        if (musicEnabled && running) startMusic();
+        else stopMusic();
+      });
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+      updateStats();
+      updateMusicControl();
+    })();
+  </script>
+</body>
+</html>
