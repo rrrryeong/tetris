@@ -362,6 +362,7 @@
     <footer class="page-footer"><span>NEON STACK / TETRIS MVP</span><span>MADE FOR ONE MORE ROUND</span></footer>
   </div>
 
+  <script src="game-logic.js"></script>
   <script>
     (() => {
       'use strict';
@@ -631,16 +632,7 @@
 
       function rotate() {
         if (!running || !active) return;
-        const matrix = active.matrix;
-        const rotated = matrix[0].map((_, x) => matrix.map(row => row[x]).reverse());
-        for (const offset of [0, -1, 1, -2, 2]) {
-          if (!collides(active, offset, 0, rotated)) {
-            active.matrix = rotated;
-            active.x += offset;
-            draw();
-            return;
-          }
-        }
+        if (TetrisLogic.rotate(active, collides)) draw();
       }
 
       function hardDrop() {
@@ -751,7 +743,7 @@
         const delta = time - lastTime;
         lastTime = time;
         dropCounter += delta;
-        const interval = Math.max(110, 800 - (level - 1) * 65);
+        const interval = TetrisLogic.getDropInterval(level);
         if (dropCounter >= interval) stepDown();
         draw();
         if (running) animationFrame = requestAnimationFrame(tick);

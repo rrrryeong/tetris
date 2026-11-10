@@ -1,0 +1,26 @@
+{
+  "name": "tetris",
+  "version": "1.0.0",
+  "description": "이 프로젝트는 별도 설치나 빌드 과정이 없는 테트리스 웹앱입니다. `index.html`은 플레이 안내가 있는 랜딩 페이지이고, `game.html`은 실제 게임 화면입니다.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rrrryeong/tetris.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rrrryeong/tetris/issues"
+  },
+  "homepage": "https://github.com/rrrryeong/tetris#readme",
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2"
+  }
+}

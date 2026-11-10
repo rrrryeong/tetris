@@ -8,11 +8,12 @@
 
 ```sh
 mkdir -p ~/work/tetris
-cp index.html game.html README.md GITHUB_PAGES.md ~/work/tetris/
+cp index.html game.html game-logic.js README.md JEST.md GITHUB_PAGES.md jest.config.cjs ~/work/tetris/
+cp -R tests ~/work/tetris/
 cd ~/work/tetris
 ```
 
-`index.html`과 `game.html`은 서로 상대 경로로 연결되어 있으므로 같은 폴더에 둡니다. `AGENTS.md`와 `WORKFLOW.md`는 대화 기록과 작업 지침이므로 공개 저장소에 복사하지 않습니다.
+`index.html`, `game.html`, `game-logic.js`는 서로 상대 경로로 연결되어 있으므로 같은 폴더에 둡니다. `AGENTS.md`와 `WORKFLOW.md`는 대화 기록과 작업 지침이므로 공개 저장소에 복사하지 않습니다.
 
 ## 2. SSH 키로 GitHub 인증
 
@@ -57,7 +58,7 @@ GitHub 계정 `rrrryeong`으로 로그인해 `tetris`라는 새 저장소를 만
 ```sh
 cd ~/work/tetris
 git init -b main
-git add index.html game.html README.md GITHUB_PAGES.md
+git add index.html game.html game-logic.js README.md GITHUB_PAGES.md JEST.md jest.config.cjs tests/
 git commit -m "Prepare Tetris for GitHub Pages"
 git remote add origin git@github.com:rrrryeong/tetris.git
 git push -u origin main
@@ -95,7 +96,7 @@ https://rrrryeong.github.io/tetris/
 
 ```sh
 cd ~/work/tetris
-git add index.html game.html README.md
+git add index.html game.html game-logic.js README.md GITHUB_PAGES.md JEST.md jest.config.cjs tests/
 git commit -m "Update Tetris app"
 git push
 ```
